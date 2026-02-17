@@ -3,7 +3,8 @@ import type { FastifyServerOptions } from 'fastify';
 type LoggerOption = Exclude<FastifyServerOptions['logger'], undefined>;
 
 const environment = process.env.NODE_ENV ?? 'development';
-const logLevel = process.env.LOG_LEVEL ?? 'info';
+const defaultLogLevel = environment === 'development' ? 'trace' : 'info';
+const logLevel = process.env.LOG_LEVEL ?? defaultLogLevel;
 
 const redactPaths = [
   'req.headers.authorization',
