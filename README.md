@@ -1,9 +1,11 @@
 # codebase-fastify
-Codebase fastify
 
+Codebase fastify
 
 ## TODO
 
-- Add route ping 
+- [x] Auth swagger endpoint ✅
+- [x] Auto format code ✅
+- Add route ping
 - Signup, Login,
-- Init utitls 'simple generate password' 
+- Init utitls 'simple generate password'

@@ -3,13 +3,14 @@ import 'dotenv/config'; // 🔥 FIRST LINE
 
 import Fastify from 'fastify';
 import swagger from './plugins/swagger';
+import { loggerConfig } from './utils/logger';
 // import jwt from './plugins/jwt'
 import authRoutes from './routes/auth';
 import emailRoutes from './routes/email';
 
 async function buildServer() {
   const fastify = Fastify({
-    logger: true
+    logger: loggerConfig
   });
 
   await fastify.register(swagger);
@@ -28,9 +29,9 @@ async function start() {
 
   try {
     await server.listen({ port: Number(PORT) });
-    console.log(`Server running at http://localhost:${PORT}`);
+    server.log.info(`Server running at port ${PORT}`);
   } catch (err) {
-    server.log.error(err);
+    server.log.error({ err }, 'Server failed to start');
     process.exit(1);
   }
 }
