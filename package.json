@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "npm run build && /bin/sh -c 'trap \"kill 0\" INT TERM EXIT; npm run dev:build & npm run dev:serve'",
+    "dev:build": "tsc --watch --preserveWatchOutput",
+    "dev:serve": "node --watch dist/server.js",
     "build": "tsc",
     "start": "node dist/server.js"
   },
