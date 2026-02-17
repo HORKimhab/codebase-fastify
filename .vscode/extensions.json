@@ -1,9 +1,10 @@
 {
-    "recommendations": [
-        "firsttris.vscode-jest-runner",
-        "ms-vscode.vscode-typescript-next",
-        "dbaeumer.vscode-eslint",
-        "mikestead.dotenv",
-        "openai.chatgpt"
-    ]
+  "recommendations": [
+    "firsttris.vscode-jest-runner",
+    "ms-vscode.vscode-typescript-next",
+    "dbaeumer.vscode-eslint",
+    "mikestead.dotenv",
+    "esbenp.prettier-vscode",
+    "openai.chatgpt"
+  ]
 }

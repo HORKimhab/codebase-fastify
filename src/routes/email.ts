@@ -1,12 +1,12 @@
-import type { FastifyInstance } from "fastify";
-import { mailService } from "../services/mail/MailService";
+import type { FastifyInstance } from 'fastify';
+import { mailService } from '../services/mail/MailService';
 
 export default async function (fastify: FastifyInstance) {
   fastify.post(
-    "/send-mail",
+    '/send-mail',
     {
       config: {
-        public: true, // 👈 Skip JWT
+        public: true // 👈 Skip JWT
       },
       schema: {
         tags: ['Email'],
@@ -24,7 +24,7 @@ export default async function (fastify: FastifyInstance) {
         }
       }
     },
-    
+
     async (request, reply) => {
       const { to, subject, text, html } = request.body as any;
 
@@ -33,16 +33,16 @@ export default async function (fastify: FastifyInstance) {
           to,
           subject,
           text,
-          html,
+          html
         });
 
         return {
           success: true,
-          messageId: info.messageId,
+          messageId: info.messageId
         };
       } catch (error) {
         fastify.log.error(error);
-        return reply.code(500).send({ error: "Mail failed" });
+        return reply.code(500).send({ error: 'Mail failed' });
       }
     }
   );
