@@ -3,6 +3,7 @@ import 'dotenv/config'; // 🔥 FIRST LINE
 import { readdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
+import httpClient from './plugins/httpClient';
 import swagger from './plugins/swagger';
 import { loggerConfig } from './utils/logger';
 // import jwt from './plugins/jwt'
@@ -55,6 +56,7 @@ async function buildServer() {
     logger: loggerConfig
   });
 
+  await fastify.register(httpClient);
   await fastify.register(swagger);
   //   await fastify.register(jwt)
 
