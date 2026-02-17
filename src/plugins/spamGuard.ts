@@ -1,5 +1,6 @@
 import rateLimit from '@fastify/rate-limit';
 import fp from 'fastify-plugin';
+import { createHash } from 'node:crypto';
 
 type GuardMode = 'skip' | 'protect' | 'strict';
 
@@ -32,6 +33,14 @@ const toList = (value: string | undefined, fallback: string[]) => {
     .filter(Boolean);
 };
 
+const getHeaderValue = (value: string | string[] | undefined) => {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return value;
+};
+
 const parseTimeWindow = (value: string | undefined, fallback: string) => {
   if (!value?.trim()) {
     return fallback;
@@ -56,6 +65,8 @@ const normalizeMode = (value: unknown, fallback: GuardMode): GuardMode => {
   return fallback;
 };
 
+const safeHash = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 16);
+
 export default fp(
   async function spamGuardPlugin(fastify) {
     const enabled = toBool(process.env.SPAM_GUARD_ENABLED, true);
@@ -66,6 +77,10 @@ export default fp(
     }
 
     const globalRateLimitEnabled = toBool(process.env.SPAM_GLOBAL_RATE_LIMIT, true);
+    const useUserAgentInRateKey = toBool(process.env.SPAM_RATE_LIMIT_USE_USER_AGENT, true);
+    const useClientIdInRateKey = toBool(process.env.SPAM_RATE_LIMIT_USE_CLIENT_ID, true);
+    const useAuthTokenInRateKey = toBool(process.env.SPAM_RATE_LIMIT_USE_AUTH_TOKEN, true);
+    const clientIdHeader = (process.env.SPAM_RATE_LIMIT_CLIENT_ID_HEADER || 'x-client-id').toLowerCase();
     const defaultMode = normalizeMode(process.env.SPAM_GUARD_DEFAULT_MODE, 'protect');
     const skipPrefixes = toList(process.env.SPAM_GUARD_SKIP_PREFIXES, ['/swagger/docs', '/ping']);
 
@@ -102,7 +117,33 @@ export default fp(
         },
         keyGenerator: (request) => {
           const routeKey = request.routeOptions?.url ?? request.url;
-          return `${request.ip}:${request.method}:${routeKey}`;
+          const ip = request.ip || 'unknown-ip';
+          const userAgent = ((request.headers['user-agent'] as string | undefined) || 'unknown-ua').toLowerCase().trim();
+          const clientId = getHeaderValue(request.headers[clientIdHeader as keyof typeof request.headers]);
+          const authToken = getHeaderValue(request.headers.authorization as string | string[] | undefined);
+
+          const identities: string[] = [`ip:${ip}`];
+
+          if (useUserAgentInRateKey) {
+            identities.push(`ua:${userAgent}`);
+            fastify.log.debug(`[userAgent]: ${userAgent}`);
+            fastify.log.debug(`[useUserAgentInRateKey]: ${identities}`);
+          }
+
+          if (useClientIdInRateKey && clientId) {
+            fastify.log.debug(`[useClientIdInRateKey]: ${useClientIdInRateKey}`);
+            fastify.log.debug(`[clientId]: ${clientId}`);
+            identities.push(`cid:${clientId}`);
+          }
+
+          if (useAuthTokenInRateKey && authToken) {
+            fastify.log.debug(`[useAuthTokenInRateKey]: ${useAuthTokenInRateKey}`);
+            fastify.log.debug(`[safeHash(authToken)]: ${safeHash(authToken)}`);
+            fastify.log.debug(`[clientId]: ${clientId}`);
+            identities.push(`auth:${safeHash(authToken)}`);
+          }
+
+          return `${request.method}:${routeKey}:${identities.join('|')}`;
         },
         allowList: (request) => {
           const path = (request.url || '/').split('?')[0] || '/';
@@ -148,6 +189,12 @@ export default fp(
       {
         globalRateLimitEnabled,
         defaultMode,
+        rateKey: {
+          useUserAgentInRateKey,
+          useClientIdInRateKey,
+          useAuthTokenInRateKey,
+          clientIdHeader
+        },
         skipPrefixes,
         blockedAgentCount: blockedAgents.length,
         strictBlockedAgentCount: strictBlockedAgents.length

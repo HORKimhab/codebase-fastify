@@ -73,7 +73,7 @@ async function start() {
   const PORT = process.env.APP_PORT || 3000;
 
   try {
-    await server.listen({ port: Number(PORT) });
+    await server.listen({ port: Number(PORT), host: '0.0.0.0' });
     server.log.info(`Server running at port ${PORT}`);
   } catch (err) {
     server.log.error({ err }, 'Server failed to start');
