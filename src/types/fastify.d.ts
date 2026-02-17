@@ -1,6 +1,11 @@
 import '@fastify/jwt'
 import type { HttpClient } from '../plugins/httpClient'
 
+interface SpamRateLimitConfig {
+  max?: number
+  timeWindow?: number | string
+}
+
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: any
@@ -17,5 +22,7 @@ declare module 'fastify' {
 
   interface RouteConfig {
     public?: boolean
+    spamGuard?: boolean | 'skip' | 'protect' | 'strict'
+    rateLimit?: boolean | SpamRateLimitConfig
   }
 }

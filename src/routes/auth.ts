@@ -3,6 +3,13 @@ import type { FastifyInstance } from 'fastify'
 export default async function (fastify: FastifyInstance) {
 
   fastify.post('/login', {
+    config: {
+      spamGuard: 'strict',
+      rateLimit: {
+        max: 5,
+        timeWindow: '1m'
+      }
+    },
     schema: {
       tags: ['Auth'],
       description: 'Login and get JWT token',

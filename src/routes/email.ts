@@ -6,7 +6,12 @@ export default async function (fastify: FastifyInstance) {
     '/send-mail',
     {
       config: {
-        public: true // 👈 Skip JWT
+        public: true, // 👈 Skip JWT
+        spamGuard: 'strict',
+        rateLimit: {
+          max: 8,
+          timeWindow: '1m'
+        }
       },
       schema: {
         tags: ['Email'],

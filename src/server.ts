@@ -4,6 +4,7 @@ import { readdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
 import httpClient from './plugins/httpClient';
+import spamGuard from './plugins/spamGuard';
 import swagger from './plugins/swagger';
 import { loggerConfig } from './utils/logger';
 // import jwt from './plugins/jwt'
@@ -57,6 +58,7 @@ async function buildServer() {
   });
 
   await fastify.register(httpClient);
+  await fastify.register(spamGuard);
   await fastify.register(swagger);
   //   await fastify.register(jwt)
 

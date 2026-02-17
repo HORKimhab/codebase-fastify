@@ -8,12 +8,13 @@
     "dev": "npm run build && /bin/sh -c 'trap \"kill 0\" INT TERM EXIT; npm run dev:build & npm run dev:serve'",
     "dev:build": "tsc --watch --preserveWatchOutput",
     "dev:serve": "node --watch dist/server.js",
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "start": "node dist/server.js"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.990.0",
     "@fastify/jwt": "^10.0.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
     "dotenv": "^17.3.1",
