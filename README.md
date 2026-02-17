@@ -8,3 +8,4 @@ Codebase fastify
 - Add route ping 
 - Signup, Login,
 - Init utitls 'simple generate password' 
+- 

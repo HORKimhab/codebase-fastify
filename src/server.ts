@@ -1,6 +1,9 @@
+// Load .env
+import 'dotenv/config'  // 🔥 FIRST LINE
+
 import Fastify from 'fastify'
 import swagger from './plugins/swagger'
-import jwt from './plugins/jwt'
+// import jwt from './plugins/jwt'
 import authRoutes from './routes/auth'
 import emailRoutes from './routes/email'
 
@@ -10,7 +13,8 @@ async function buildServer() {
   })
 
   await fastify.register(swagger)
-  await fastify.register(jwt)
+//   await fastify.register(jwt)
+
 
   await fastify.register(authRoutes)
   await fastify.register(emailRoutes)
