@@ -23,6 +23,11 @@ Runtime flow:
 - `ENV_VALUE_ENCRYPTION_KEY`
   - used to decrypt selected encrypted values inside the env content
 
+Hint:
+- `ENV_VALUE_ENCRYPTION_KEY` is the key for `encryptEnvValue(...)` / `decryptEnvValue(...)`
+- `ENV_ENCRYPTION_KEY` is the key for `encryptEnvFileContent(...)` / `decryptEnvFileContent(...)`
+- keep the original plaintext `.env` in a safe backup before overwriting it with encrypted values
+
 ### Commands
 
 Encrypt detected secret values inside `.env`:
@@ -80,9 +85,10 @@ npm run dev
 ### Recommended flow
 
 1. Create or update `.env`
-2. Encrypt sensitive values inside `.env`
-3. Encrypt the full `.env` into `.env.enc`
-4. Run the app with both runtime keys
+2. Keep a safe plaintext backup of `.env`
+3. Encrypt sensitive values inside `.env`
+4. Encrypt the full `.env` into `.env.enc`
+5. Run the app with both runtime keys
 
 Example:
 
@@ -95,6 +101,14 @@ SECRET_45=your_secret_value_45
 ```
 
 Step 1, encrypt selected values:
+
+Before encrypting, keep a safe plaintext copy:
+
+```bash
+cp .env .env.plain.backup
+```
+
+Step 2, encrypt selected values:
 
 ```bash
 ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run encrypt-env-values
@@ -115,7 +129,7 @@ If you want to restore plaintext values later:
 ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run decrypt-env-values -- --all
 ```
 
-Step 2, encrypt the file:
+Step 3, encrypt the file:
 
 ```bash
 ENV_ENCRYPTION_KEY=my-file-key npm run encrypt-env
@@ -127,7 +141,7 @@ After this, `.env.enc` contains a file payload like:
 envfile::v1:...
 ```
 
-Step 3, run the service:
+Step 4, run the service:
 
 ```bash
 ENV_ENCRYPTION_KEY=my-file-key \
@@ -182,10 +196,12 @@ Use different keys per environment and avoid typing secrets directly into produc
 
 Development:
 
+- Keep a safe local backup before overwriting `.env`
 - Decrypt locally when you need to inspect or edit env values
 - Re-encrypt before testing the full secure flow
 
 ```bash
+cp .env .env.plain.backup
 export ENV_VALUE_ENCRYPTION_KEY='dev-value-key'
 npm run decrypt-env-values -- --all
 ```
@@ -206,6 +222,7 @@ ENV_ENCRYPTION_KEY='dev-file-key' ENV_VALUE_ENCRYPTION_KEY='dev-value-key' npm r
 
 Staging:
 
+- Keep the original plaintext `.env` only in a secure operator-controlled backup
 - Keep `.env` values encrypted and keep `.env.enc` encrypted too
 - Decrypt only for temporary debugging or recovery tasks
 
@@ -232,6 +249,7 @@ npm run encrypt-env
 
 Production:
 
+- Keep any original plaintext `.env` outside the server in a secure backup location
 - Prefer runtime decryption only
 - Avoid `decrypt-env-values -- --all` unless it is a controlled incident or recovery task
 - Do not place secret keys inline in shell history if you can avoid it
