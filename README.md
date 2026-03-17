@@ -2,6 +2,271 @@
 
 Codebase fastify
 
+## Two-Layer Env Encryption
+
+This service supports two encryption layers for configuration:
+
+1. Value-level encryption inside `.env`
+2. File-level encryption from `.env` to `.env.enc`
+
+Runtime flow:
+- If `.env.enc` exists, the app decrypts it with `ENV_ENCRYPTION_KEY`
+- The parsed env values are then scanned for encrypted value payloads
+- Any encrypted values are decrypted with `ENV_VALUE_ENCRYPTION_KEY`
+- The final plaintext values are loaded into `process.env`
+- If `.env.enc` does not exist, the app falls back to `.env` and still decrypts encrypted values inside it
+
+### Keys
+
+- `ENV_ENCRYPTION_KEY`
+  - used to decrypt the full `.env.enc` file
+- `ENV_VALUE_ENCRYPTION_KEY`
+  - used to decrypt selected encrypted values inside the env content
+
+### Commands
+
+Encrypt detected secret values inside `.env`:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run encrypt-env-values
+```
+
+The command auto-detects secret-like keys already present in `.env`, such as keys containing `PASS`, `PASSWORD`, `SECRET`, `TOKEN`, `ACCESS_KEY`, `API_KEY`, `PRIVATE_KEY`, or `CLIENT_SECRET`. It skips empty values and values that are already encrypted, then prints a summary of detected, encrypted, and skipped keys.
+
+Encrypt every valid env value:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run encrypt-env-values -- --all
+```
+
+Encrypt only specific keys:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run encrypt-env-values -- --only=MAIL_PASS,AWS_SECRET_ACCESS_KEY
+```
+
+Decrypt encrypted env values back to plaintext:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run decrypt-env-values
+```
+
+Decrypt all encrypted entries found in `.env`:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run decrypt-env-values -- --all
+```
+
+Decrypt only specific keys:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run decrypt-env-values -- --only=MAIL_PASS,AWS_SECRET_ACCESS_KEY
+```
+
+Encrypt the full `.env` file into `.env.enc`:
+
+```bash
+ENV_ENCRYPTION_KEY=my-file-key npm run encrypt-env
+```
+
+Run the app with both keys:
+
+```bash
+ENV_ENCRYPTION_KEY=my-file-key \
+ENV_VALUE_ENCRYPTION_KEY=my-value-key \
+npm run dev
+```
+
+### Recommended flow
+
+1. Create or update `.env`
+2. Encrypt sensitive values inside `.env`
+3. Encrypt the full `.env` into `.env.enc`
+4. Run the app with both runtime keys
+
+Example:
+
+```env
+MAIL_USER=your_email@gmail.com
+MAIL_PASS=your_app_password
+AWS_SECRET_ACCESS_KEY=xxxx
+SWAGGER_PASSWORD=change_this_password
+SECRET_45=your_secret_value_45
+```
+
+Step 1, encrypt selected values:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run encrypt-env-values
+```
+
+After this, `.env` will contain encrypted values like:
+
+```env
+MAIL_PASS=envval::v1:...
+AWS_SECRET_ACCESS_KEY=envval::v1:...
+SWAGGER_PASSWORD=envval::v1:...
+SECRET_45=envval::v1:...
+```
+
+If you want to restore plaintext values later:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run decrypt-env-values -- --all
+```
+
+Step 2, encrypt the file:
+
+```bash
+ENV_ENCRYPTION_KEY=my-file-key npm run encrypt-env
+```
+
+After this, `.env.enc` contains a file payload like:
+
+```text
+envfile::v1:...
+```
+
+Step 3, run the service:
+
+```bash
+ENV_ENCRYPTION_KEY=my-file-key \
+ENV_VALUE_ENCRYPTION_KEY=my-value-key \
+npm run start
+```
+
+### Function reference
+
+- `encryptEnvValue(value, encryptionKey)`
+  - encrypts one env value using the value-level format
+- `decryptEnvValue(value, encryptionKey)`
+  - decrypts one env value that starts with `envval::v1:`
+- `detectEncryptableEnvKeys(content)`
+  - discovers secret-like env keys from raw `.env` text
+- `detectAllEnvKeys(content)`
+  - discovers every valid env key from raw `.env` text
+- `detectEncryptedEnvKeys(content)`
+  - discovers env keys whose values already use the `envval::v1:` format
+- `encryptEnvValuesInContent(content, encryptionKey, options)`
+  - rewrites env values using `auto`, `all`, or `only` mode and returns detected/encrypted/skipped summaries
+- `decryptEnvValuesInContent(content, encryptionKey, options)`
+  - rewrites encrypted env values back to plaintext using `auto`, `all`, or `only` mode and returns detected/decrypted/skipped summaries
+- `encryptEnvFileContent(content, encryptionKey)`
+  - encrypts the full env file content for storage in `.env.enc`
+- `decryptEnvFileContent(value, encryptionKey)`
+  - decrypts a full `.env.enc` payload back into plaintext env text
+- `decryptParsedEnvValues(values, encryptionKey)`
+  - decrypts encrypted env entries after parsing env text
+- `loadRuntimeEnv(options)`
+  - loads `.env.enc` or `.env`, decrypts when needed, and populates `process.env`
+
+### Failure behavior
+
+Startup fails when:
+
+- `.env.enc` exists but `ENV_ENCRYPTION_KEY` is missing or wrong
+- an env value uses `envval::v1:` but `ENV_VALUE_ENCRYPTION_KEY` is missing or wrong
+- the encrypted file or encrypted value payload is malformed
+
+### Security notes
+
+- Do not store runtime keys inside `.env.enc`
+- Prefer providing runtime keys from your shell, CI/CD secrets, Docker secrets, or secret manager
+- Use different keys for development, staging, and production
+- Re-encrypt `.env` after changing any sensitive value
+- Treat `.env.enc` as sensitive deployment data even though it is encrypted
+
+### Dev, Staging, and Production workflow
+
+Use different keys per environment and avoid typing secrets directly into production command lines when possible.
+
+Development:
+
+- Decrypt locally when you need to inspect or edit env values
+- Re-encrypt before testing the full secure flow
+
+```bash
+export ENV_VALUE_ENCRYPTION_KEY='dev-value-key'
+npm run decrypt-env-values -- --all
+```
+
+After editing:
+
+```bash
+npm run encrypt-env-values -- --all
+export ENV_ENCRYPTION_KEY='dev-file-key'
+npm run encrypt-env
+```
+
+Run the app:
+
+```bash
+ENV_ENCRYPTION_KEY='dev-file-key' ENV_VALUE_ENCRYPTION_KEY='dev-value-key' npm run dev
+```
+
+Staging:
+
+- Keep `.env` values encrypted and keep `.env.enc` encrypted too
+- Decrypt only for temporary debugging or recovery tasks
+
+Normal run:
+
+```bash
+ENV_ENCRYPTION_KEY='staging-file-key' ENV_VALUE_ENCRYPTION_KEY='staging-value-key' npm run start
+```
+
+Temporary debug session:
+
+```bash
+export ENV_VALUE_ENCRYPTION_KEY='staging-value-key'
+npm run decrypt-env-values -- --all
+```
+
+After debugging:
+
+```bash
+npm run encrypt-env-values -- --all
+export ENV_ENCRYPTION_KEY='staging-file-key'
+npm run encrypt-env
+```
+
+Production:
+
+- Prefer runtime decryption only
+- Avoid `decrypt-env-values -- --all` unless it is a controlled incident or recovery task
+- Do not place secret keys inline in shell history if you can avoid it
+
+Normal run:
+
+```bash
+ENV_ENCRYPTION_KEY='prod-file-key' ENV_VALUE_ENCRYPTION_KEY='prod-value-key' npm run start
+```
+
+Temporary recovery flow:
+
+```bash
+export ENV_VALUE_ENCRYPTION_KEY='prod-value-key'
+npm run decrypt-env-values -- --all
+unset ENV_VALUE_ENCRYPTION_KEY
+```
+
+Re-encrypt after the task:
+
+```bash
+export ENV_VALUE_ENCRYPTION_KEY='prod-value-key'
+npm run encrypt-env-values -- --all
+export ENV_ENCRYPTION_KEY='prod-file-key'
+npm run encrypt-env
+unset ENV_VALUE_ENCRYPTION_KEY
+unset ENV_ENCRYPTION_KEY
+```
+
+Best practice summary:
+
+- Development: decrypt when needed
+- Staging: decrypt only for troubleshooting
+- Production: avoid decrypting and keep secrets encrypted at rest
+
 ## HTTP Client Aliases
 
 ```bash

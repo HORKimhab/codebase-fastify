@@ -1,5 +1,4 @@
-// Load .env
-import 'dotenv/config'; // 🔥 FIRST LINE
+import './bootstrapEnv';
 import { readdir } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import Fastify, { type FastifyInstance } from 'fastify';
