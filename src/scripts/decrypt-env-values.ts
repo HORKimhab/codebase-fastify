@@ -1,10 +1,13 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { decryptEnvValuesInContent } from '../utils/envCrypto';
+import { buildTelegramChannelHint } from '../utils/telegramHint';
 
 const cwd = process.cwd();
 const envPath = join(cwd, '.env');
 const encryptionKey = process.env.ENV_VALUE_ENCRYPTION_KEY?.trim();
+const telegramChannelId = process.env.TELEGRAM_CHANNEL_ID;
+const encryptionKeyHint = process.env.HINT_ENV_VALUE_ENCRYPTION_KEY;
 const args = process.argv.slice(2);
 
 const allMode = args.includes('--all');
@@ -45,6 +48,12 @@ try {
   console.log(`Detected keys: ${result.detectedKeys.join(', ')}`);
   console.log(`Decrypted keys: ${result.decryptedKeys.length ? result.decryptedKeys.join(', ') : '(none)'}`);
   console.log(`Skipped keys: ${result.skippedKeys.length ? result.skippedKeys.join(', ') : '(none)'}`);
+
+  const telegramHint = buildTelegramChannelHint(telegramChannelId, 'env value decryption', encryptionKeyHint);
+
+  if (telegramHint) {
+    console.log(telegramHint);
+  }
 } catch (error) {
   const message = error instanceof Error ? error.message : 'Unknown error';
   console.error(`Failed to decrypt env values: ${message}`);

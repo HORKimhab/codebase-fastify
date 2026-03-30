@@ -27,6 +27,9 @@ Hint:
 - `ENV_VALUE_ENCRYPTION_KEY` is the key for `encryptEnvValue(...)` / `decryptEnvValue(...)`
 - `ENV_ENCRYPTION_KEY` is the key for `encryptEnvFileContent(...)` / `decryptEnvFileContent(...)`
 - keep the original plaintext `.env` in a safe backup before overwriting it with encrypted values
+- if you use Telegram notifications, keep only the Telegram channel/chat id for alerts or backup references, never send the actual encryption keys to Telegram
+- if `TELEGRAM_CHANNEL_ID` is set, the env scripts can print a safe operator hint for that channel id
+- `HINT_ENV_VALUE_ENCRYPTION_KEY` and `HINT_ENV_ENCRYPTION_KEY` may contain a safe key reference such as a vault path or 1Password item name, but never the real key
 
 ### Commands
 
@@ -37,6 +40,17 @@ ENV_VALUE_ENCRYPTION_KEY=my-value-key npm run encrypt-env-values
 ```
 
 The command auto-detects secret-like keys already present in `.env`, such as keys containing `PASS`, `PASSWORD`, `SECRET`, `TOKEN`, `ACCESS_KEY`, `API_KEY`, `PRIVATE_KEY`, or `CLIENT_SECRET`. It skips empty values and values that are already encrypted, then prints a summary of detected, encrypted, and skipped keys.
+
+If `TELEGRAM_CHANNEL_ID` is set, the command also prints a safe Telegram notification hint for that channel id. The hint is for operational status only and must never include `ENV_ENCRYPTION_KEY`, `ENV_VALUE_ENCRYPTION_KEY`, or decrypted secret values.
+
+Example with safe hint metadata:
+
+```bash
+ENV_VALUE_ENCRYPTION_KEY=my-value-key \
+HINT_ENV_VALUE_ENCRYPTION_KEY='vault path: secret/prod/value-key' \
+TELEGRAM_CHANNEL_ID=-1001234567890 \
+npm run decrypt-env-values -- --all
+```
 
 Encrypt every valid env value:
 
@@ -189,6 +203,7 @@ Startup fails when:
 - Use different keys for development, staging, and production
 - Re-encrypt `.env` after changing any sensitive value
 - Treat `.env.enc` as sensitive deployment data even though it is encrypted
+- If you use Telegram, send status messages or backup file references only. Do not send `ENV_ENCRYPTION_KEY` or `ENV_VALUE_ENCRYPTION_KEY` to a Telegram channel/chat
 
 ### Dev, Staging, and Production workflow
 

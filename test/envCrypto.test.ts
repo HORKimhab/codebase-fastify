@@ -17,6 +17,7 @@ import {
   encryptEnvValuesInContent,
   loadRuntimeEnv
 } from '../src/utils/envCrypto';
+import { buildTelegramChannelHint } from '../src/utils/telegramHint';
 
 const ORIGINAL_ENV = { ...process.env };
 const tempDirs: string[] = [];
@@ -225,4 +226,12 @@ test('loadRuntimeEnv throws when value decryption key is missing for encrypted e
 
 test('decryptEnvFileContent rejects malformed encrypted payloads', () => {
   assert.throws(() => decryptEnvFileContent(`${FILE_ENCRYPTED_PREFIX}broken-payload`, 'file-key'), /malformed/);
+});
+
+test('buildTelegramChannelHint returns a safe notification hint without exposing keys', () => {
+  const hint = buildTelegramChannelHint('-1001234567890', 'env value encryption', 'vault path: secret/prod/value-key');
+
+  assert.match(hint ?? '', /Telegram hint: notify channel -1001234567890/);
+  assert.match(hint ?? '', /Safe key reference: vault path: secret\/prod\/value-key/);
+  assert.match(hint ?? '', /Never send ENV_ENCRYPTION_KEY, ENV_VALUE_ENCRYPTION_KEY, or secret values to Telegram/);
 });
